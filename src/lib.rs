@@ -2,11 +2,6 @@ use std::env;
 use std::error::Error;
 use std::fs;
 
-pub fn get_cmd_line_arg() -> Vec<String> {
-    let args_list: std::vec::Vec<String> = env::args().collect();
-    args_list
-}
-
 pub struct Config {
     pub query: String,
     pub filename: String,
@@ -14,12 +9,18 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new(args: &[String]) -> Result<Config, &'static str> {
-        if args.len() < 3 {
-            return Err("Not enough arguments");
-        }
-        let query = args[1].clone();
-        let filename = args[2].clone();
+    pub fn new(mut args: env::Args) -> Result<Config, &'static str> {
+        args.next();
+
+        let query = match args.next() {
+            Some(arg) => arg,
+            None => return Err("Query Missing"),
+        };
+
+        let filename = match args.next() {
+            Some(arg) => arg,
+            None => return Err("Filename Missing"),
+        };
 
         let case_sensitive = env::var("CASE_INSENSITIVE").is_err();
 
@@ -49,26 +50,14 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
 }
 
 pub fn case_sensitive_search<'a>(query: &str, content: &'a str) -> Vec<&'a str> {
-    let mut matched_lines: Vec<&str> = Vec::new();
-
-    for line in content.lines() {
-        if line.contains(query) {
-            matched_lines.push(line);
-        }
-    }
-    matched_lines
+    content.lines().filter(|l| l.contains(query)).collect()
 }
 
 pub fn case_insensitive_search<'a>(query: &str, content: &'a str) -> Vec<&'a str> {
-    let mut matched_lines: Vec<&str> = Vec::new();
-
-    for line in content.lines() {
-        if line.to_lowercase().contains(&query.to_lowercase()) {
-            matched_lines.push(line);
-        }
-    }
-    println!("Case Insensitive Matched Lines: {:?}", matched_lines);
-    matched_lines
+    content
+        .lines()
+        .filter(|l| l.to_lowercase().contains(&query.to_lowercase()))
+        .collect()
 }
 
 #[cfg(test)]
